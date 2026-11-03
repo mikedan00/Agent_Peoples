@@ -8,8 +8,8 @@ from chat_store import Message
 # Provider; without a suffix Hugging Face picks one automatically.
 # Override the whole list with HF_MODELS in Streamlit Secrets.
 DEFAULT_MODELS = [
-    "Qwen/Qwen3.6-27B",
     "google/gemma-4-26B-A4B-it:deepinfra",
+    "Qwen/Qwen3.6-27B",
     "Qwen/Qwen2.5-7B-Instruct",
 ]
 AI_NAME = "AI"

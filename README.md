@@ -58,8 +58,8 @@ VS Code에서는 **실행 및 디버그(Ctrl+Shift+D)** → `Streamlit: app.py`�
    ```toml
    HF_TOKEN = "hf_여기에_토큰"
    HF_MODELS = [
-     "Qwen/Qwen3.6-27B",
      "google/gemma-4-26B-A4B-it:deepinfra",
+     "Qwen/Qwen3.6-27B",
      "Qwen/Qwen2.5-7B-Instruct",
    ]
    ```
