@@ -31,7 +31,7 @@ def get_setting(name: str, default: str | None = None) -> str | None:
 
 store = get_store()
 hf_token = get_setting("HF_TOKEN")
-hf_model = get_setting("HF_MODEL", ai_agent.DEFAULT_MODEL)
+hf_models = list(get_setting("HF_MODELS") or ai_agent.DEFAULT_MODELS)
 
 if "session_id" not in st.session_state:
     st.session_state.session_id = uuid.uuid4().hex
@@ -54,8 +54,9 @@ with st.sidebar:
 
     st.divider()
     if hf_token:
-        st.success(f"AI 연결됨\n\n모델: `{hf_model}`")
-        st.caption("메시지를 `@AI`로 시작하면 AI가 답합니다.")
+        st.success("AI 연결됨")
+        hf_model = st.selectbox("AI 모델", hf_models, key="hf_model")
+        st.caption("메시지를 `@AI`로 시작하면 선택한 모델이 답합니다.")
     else:
         st.warning("HF_TOKEN이 설정되지 않아 AI를 사용할 수 없습니다.")
 
@@ -90,5 +91,6 @@ if text := st.chat_input("메시지 입력 (@AI 로 AI 호출)", max_chars=MAX_M
                     reply = ai_agent.ask(hf_token, hf_model, store.messages(room))
                 except Exception as e:
                     reply = f"AI 호출 실패: {e}"
-            store.add_message(room, ai_agent.AI_NAME, reply or "(빈 응답)", is_ai=True)
+            author = f"{ai_agent.AI_NAME} · {ai_agent.split_provider(hf_model)[0].split('/')[-1]}"
+            store.add_message(room, author, reply or "(빈 응답)", is_ai=True)
     st.rerun()

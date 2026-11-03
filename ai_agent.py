@@ -4,7 +4,14 @@ from huggingface_hub import InferenceClient
 
 from chat_store import Message
 
-DEFAULT_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+# Models users can pick in the sidebar. "model:provider" pins an Inference
+# Provider; without a suffix Hugging Face picks one automatically.
+# Override the whole list with HF_MODELS in Streamlit Secrets.
+DEFAULT_MODELS = [
+    "Qwen/Qwen3.6-27B",
+    "google/gemma-4-26B-A4B-it:deepinfra",
+    "Qwen/Qwen2.5-7B-Instruct",
+]
 AI_NAME = "AI"
 MENTION = "@ai"
 HISTORY_LIMIT = 20
@@ -30,7 +37,14 @@ def build_messages(history: list[Message], limit: int = HISTORY_LIMIT) -> list[d
     return out
 
 
+def split_provider(model: str) -> tuple[str, str | None]:
+    """'org/model:provider' -> ('org/model', 'provider'); no suffix -> provider None (auto)."""
+    name, _, provider = model.partition(":")
+    return name, provider or None
+
+
 def ask(token: str, model: str, history: list[Message], max_tokens: int = 512) -> str:
-    client = InferenceClient(model=model, token=token, timeout=60)
+    name, provider = split_provider(model)
+    client = InferenceClient(model=name, provider=provider, token=token, timeout=60)
     resp = client.chat_completion(build_messages(history), max_tokens=max_tokens)
     return (resp.choices[0].message.content or "").strip()

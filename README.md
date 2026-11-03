@@ -47,22 +47,38 @@ VS Code에서는 **실행 및 디버그(Ctrl+Shift+D)** → `Streamlit: app.py`�
 1. https://share.streamlit.io 에 GitHub 계정으로 로그인
 2. **Create app** → **Deploy a public app from GitHub**
 3. Repository: `mikedan00/agent_peoples`, Branch: `main`, Main file path: `app.py`
-4. **Advanced settings → Secrets**에 아래 내용 붙여넣기
+4. **Advanced settings → Secrets**에 아래 내용 붙여넣기 (TOML 형식)
 
+   **최소 설정** — 토큰만 넣으면 기본 모델 목록이 사용됩니다.
    ```toml
    HF_TOKEN = "hf_여기에_토큰"
-   # HF_MODEL = "Qwen/Qwen2.5-7B-Instruct"   # 선택: 다른 모델 사용 시
    ```
+
+   **모델 목록까지 직접 지정** — 사이드바 "AI 모델"에 이 순서대로 표시되고, 첫 번째가 기본값입니다.
+   ```toml
+   HF_TOKEN = "hf_여기에_토큰"
+   HF_MODELS = [
+     "Qwen/Qwen3.6-27B",
+     "google/gemma-4-26B-A4B-it:deepinfra",
+     "Qwen/Qwen2.5-7B-Instruct",
+   ]
+   ```
+   - `모델ID:provider` 형식(예: `:deepinfra`)은 그 Inference Provider로 고정해서 호출합니다. 접미사가 없으면 Hugging Face가 사용 가능한 provider를 자동으로 고릅니다.
+   - 따옴표, 대괄호, 쉼표를 그대로 지켜야 합니다. 형식이 틀리면 앱이 Secrets를 읽지 못합니다.
 5. **Deploy** → 발급된 `https://...streamlit.app` 주소를 다른 사람과 공유
 
-배포 후 Secrets를 바꾸려면 앱의 **⋮ → Settings → Secrets**에서 수정합니다.
+배포 후 Secrets를 바꾸려면 앱의 **⋮ → Settings → Secrets**에서 수정합니다. 저장하면 앱이 자동으로 다시 시작됩니다.
+
+## AI 모델 선택
+
+각 사용자가 사이드바의 **AI 모델**에서 모델을 고르면, 그 사용자가 `@AI`로 부를 때 해당 모델이 답합니다. AI 답변에는 `AI · 모델이름`이 표시됩니다.
 
 ## 알아둘 제한
 
 - **대화 기록은 서버 메모리에만 있습니다.** 앱이 재시작되거나, 일정 시간 접속이 없어 잠들면 기록이 사라집니다.
 - 실시간 푸시가 아니라 2초 간격 갱신 방식입니다.
 - 별도 로그인이 없어 닉네임은 누구나 아무 이름으로 쓸 수 있습니다.
-- AI 사용량은 Hugging Face 계정의 무료 크레딧에서 차감됩니다. 모델이 응답하지 않으면 `HF_MODEL`을 Inference Providers에서 지원하는 다른 채팅 모델로 바꾸세요.
+- AI 사용량은 Hugging Face 계정의 무료 크레딧에서 차감됩니다. 모델이 응답하지 않으면(provider가 없는 모델 등) `HF_MODELS`에서 빼거나, 모델 페이지의 **Inference Providers** 항목에 있는 다른 채팅 모델로 바꾸세요.
 
 ## 라이선스
 

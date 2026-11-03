@@ -42,6 +42,11 @@ def test_ai_mention():
     assert not ai_agent.is_ai_mention("hello @AI")
 
 
+def test_split_provider():
+    assert ai_agent.split_provider("google/gemma-4-26B-A4B-it:deepinfra") == ("google/gemma-4-26B-A4B-it", "deepinfra")
+    assert ai_agent.split_provider("Qwen/Qwen3.6-27B") == ("Qwen/Qwen3.6-27B", None)
+
+
 def test_build_messages_roles_and_limit():
     history = [
         Message("a", "kim", "@AI 질문", 1),
