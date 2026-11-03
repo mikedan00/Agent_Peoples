@@ -87,7 +87,10 @@ with st.sidebar:
         st.caption("💾 기록 저장 꺼짐 (HF_DATASET_REPO 미설정)")
 
 room = st.session_state.room
+ai_name = store.ai_name(room)
 st.subheader(f"# {room}")
+st.caption(f"🤖 AI 호출: `@AI`" + (f" 또는 `{ai_name}`" if ai_name else "") +
+           " — 이름을 지어주려면 `@AI 너의 이름은 모모야`")
 
 if not nickname:
     st.info("왼쪽 사이드바에 닉네임을 입력하면 대화에 참여할 수 있습니다.")
@@ -106,20 +109,23 @@ def chat_view():
 
 chat_view()
 
-if text := st.chat_input("메시지 입력 (@AI 로 AI 호출)", max_chars=MAX_MESSAGE_LEN):
+placeholder = f"메시지 입력 (@AI{' 또는 ' + ai_name if ai_name else ''} 로 AI 호출)"
+if text := st.chat_input(placeholder, max_chars=MAX_MESSAGE_LEN):
     store.add_message(room, nickname, text)
-    if ai_agent.is_ai_mention(text):
+    if ai_agent.is_ai_mention(text, ai_name):
         if not hf_token:
-            store.add_message(room, ai_agent.AI_NAME, "HF_TOKEN이 설정되지 않아 답할 수 없습니다.", is_ai=True)
+            store.add_message(room, ai_name or ai_agent.AI_NAME, "HF_TOKEN이 설정되지 않아 답할 수 없습니다.", is_ai=True)
         else:
             def search(query: str) -> str:
                 return web_search.format_results(web_search.search(query, tavily_key))
 
             with st.spinner("AI가 답변을 작성 중입니다..."):
                 try:
-                    reply = ai_agent.ask(hf_token, hf_model, store.messages(room), search)
+                    reply = ai_agent.ask(hf_token, hf_model, store.messages(room), search,
+                                         set_name=lambda name: store.set_ai_name(room, name), ai_name=ai_name)
                 except Exception as e:
                     reply = f"AI 호출 실패: {e}"
-            author = f"{ai_agent.AI_NAME} · {ai_agent.split_provider(hf_model)[0].split('/')[-1]}"
+            # store.ai_name again: the AI may have just been renamed in this reply.
+            author = f"{store.ai_name(room) or ai_agent.AI_NAME} · {ai_agent.split_provider(hf_model)[0].split('/')[-1]}"
             store.add_message(room, author, reply or "(빈 응답)", is_ai=True)
     st.rerun()

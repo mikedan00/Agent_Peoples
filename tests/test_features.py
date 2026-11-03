@@ -134,3 +134,42 @@ def test_hf_history_downloads_and_appends(monkeypatch, tmp_path):
     h.append({"type": "message", "text": "안녕"})
     files = list(h._scheduler.folder_path.glob("*.jsonl"))
     assert len(files) == 1 and "안녕" in files[0].read_text(encoding="utf-8")
+
+
+# ---- AI name ----
+
+def test_mention_by_ai_name():
+    assert ai_agent.is_ai_mention("모모야 인텔 주가 얼마야?", "모모")
+    assert ai_agent.is_ai_mention("@AI 안녕", "모모")
+    assert not ai_agent.is_ai_mention("모모야 안녕", None)
+    assert not ai_agent.is_ai_mention("안녕 모모", "모모")
+    assert ai_agent.is_ai_mention("Momo, hi", "momo") and ai_agent.is_ai_mention("MOMO hi", "Momo")
+
+
+def test_ai_name_is_per_room_saved_and_restored():
+    import pytest
+    records = []
+    s = ChatStore(listener=records.append)
+    assert s.set_ai_name("a", "  모모 ") == "모모"
+    assert s.ai_name("a") == "모모" and s.ai_name("b") is None
+    with pytest.raises(ValueError):
+        s.set_ai_name("a", "@AI")
+    s2 = ChatStore()
+    s2.restore(records)
+    assert s2.ai_name("a") == "모모"
+
+
+def test_ask_set_ai_name_tool_renames_without_search_tag():
+    call = NS(id="c1", function=NS(name="set_ai_name", arguments='{"name": "모모"}'))
+    client = FakeClient([_resp(tool_calls=[call]), _resp(content="네, 이제 모모예요!")])
+    names, searched = [], []
+    answer = ai_agent.ask("t", "m", _history(), searched.append, set_name=lambda n: names.append(n) or n,
+                          client=client)
+    assert names == ["모모"] and searched == []
+    assert answer == "네, 이제 모모예요!"
+    assert client.calls[1][0][-1]["content"] == "Name changed to 모모."
+
+
+def test_system_prompt_has_ai_name():
+    assert "Your name in this room: 모모." in ai_agent.build_messages([], ai_name="모모")[0]["content"]
+    assert "Your name in this room: AI." in ai_agent.build_messages([])[0]["content"]
