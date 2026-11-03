@@ -5,7 +5,8 @@ Data lives only in server memory: it is lost when the app restarts or sleeps.
 
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from typing import Callable
 
 DEFAULT_ROOM = "lobby"
 MAX_MESSAGES_PER_ROOM = 200
@@ -23,7 +24,10 @@ class Message:
 
 
 class ChatStore:
-    def __init__(self, max_messages=MAX_MESSAGES_PER_ROOM, presence_timeout=PRESENCE_TIMEOUT_SEC):
+    def __init__(self, max_messages=MAX_MESSAGES_PER_ROOM, presence_timeout=PRESENCE_TIMEOUT_SEC,
+                 listener: Callable[[dict], None] | None = None):
+        # listener receives a record for every new room and message (used for persistence).
+        self._listener = listener
         self._lock = threading.Lock()
         self._max_messages = max_messages
         self._presence_timeout = presence_timeout
@@ -40,16 +44,33 @@ class ChatStore:
         if not name:
             raise ValueError("방 이름이 비어 있습니다.")
         with self._lock:
+            is_new = name not in self._rooms
             self._rooms.setdefault(name, [])
+        if is_new and self._listener:
+            self._listener({"type": "room", "room": name, "ts": time.time()})
         return name
 
     def add_message(self, room: str, author: str, text: str, is_ai: bool = False, now: float | None = None) -> Message:
         msg = Message(room, author, text, now if now is not None else time.time(), is_ai)
+        self._append(msg)
+        if self._listener:
+            self._listener({"type": "message", **asdict(msg)})
+        return msg
+
+    def restore(self, records: list[dict]) -> None:
+        """Rebuild rooms and messages from saved records, without re-notifying the listener."""
+        for r in sorted(records, key=lambda r: r.get("ts", 0)):
+            if r.get("type") == "room":
+                with self._lock:
+                    self._rooms.setdefault(r["room"], [])
+            elif r.get("type") == "message":
+                self._append(Message(r["room"], r["author"], r["text"], r["ts"], r.get("is_ai", False)))
+
+    def _append(self, msg: Message) -> None:
         with self._lock:
-            msgs = self._rooms.setdefault(room, [])
+            msgs = self._rooms.setdefault(msg.room, [])
             msgs.append(msg)
             del msgs[: -self._max_messages]
-        return msg
 
     def messages(self, room: str) -> list[Message]:
         with self._lock:
